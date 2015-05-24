@@ -1,0 +1,77 @@
+---
+title: "PML Project"
+author: "Debasish"
+date: "Monday, May 25, 2015"
+output: html_document
+---
+##Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+
+##Goal
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. Other variable is also used to predict with. Areport is created describing
+* how the model is built
+* use of cross validation
+* an estimate of expected out of sample error
+
+## Getting and Cleaning Data
+File were downloaded to a location path: "E:/Data Science/coursera/PML". from the Url 
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+###Getting Data
+```{r}
+setwd("E:/Data Science/coursera/PML")
+
+library(ggplot2)
+library(lattice)
+library(caret)
+set.seed(3631)
+trainpml <- read.csv(file = "pml-training.csv",  na.strings = "NA")
+testpml <- read.csv(file = "pml-testing.csv",  na.strings = "NA")
+```
+
+###cleaning of Data
+ - Column having NA or empty string were are removed from training as well as test data.
+ 
+```{r}
+colhavingNAorEMPTY <- !apply((is.na(trainpml) | trainpml==""), 2, any )
+trainpml <- trainpml[,colhavingNAorEMPTY]
+testpml <- testpml[,colhavingNAorEMPTY]
+```
+
+### Data split for cross validation
+The training set is splitted into two section one for training the model(70%) and the rest 30% was kept for validation. 
+
+```{r}
+inTrain <- createDataPartition(trainpml$classe, p=.7 ,list=FALSE)
+trainingpml <- trainpml[inTrain,]
+testingpml <- trainpml[-inTrain,]
+```
+
+##Building Model 
+Random Forest Model is used to train the training data. as it uses multiple decision trees which reduces the variance, increases the preformance and accuracy. 
+- Principal component analysis is used for preprocess.which reduces the no of predictor based on the correlation
+- 4 fold cross validation is used while training the model. The data is radomly partitioned into 4 groups and 3 groups are used to train the model while one is retained for validation. This process is repeted 4 time and the result is averaged.
+
+
+```{r}
+fitControl <- trainControl(method="cv", 4)
+tgrid <- expand.grid(mtry=c(6)) 
+modelFit <- train(trainingpml$classe~., method="rf",preProcess="pca", trControl=fitControl, tuneGrid=tgrid, data=trainingpml)
+modelFit
+```
+
+###Performance estimation using validation data.
+
+```{r}
+confusionMatrix( predict( modelFit, testingpml ), testingpml$classe )
+```
+
+###Result 
+
+- Accuracy of the validation data is 0.9883 and sample error = .0117
+- As expected Random forest provides a better result
